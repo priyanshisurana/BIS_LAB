@@ -1,0 +1,112 @@
+import random
+import numpy as np
+
+# Step 1: Define the problem
+def calculate_distance(route, distances):
+    """Calculates the total distance of a given route."""
+    total_distance = 0
+    for i in range(len(route) - 1):
+        total_distance += distances[route[i]][route[i + 1]]
+    total_distance += distances[route[-1]][route[0]]  # Return to the starting city
+    return total_distance
+
+# Step 2: Initialize the population
+def initialize_population(pop_size, num_cities):
+    """Generates a random initial population."""
+    population = []
+    for _ in range(pop_size):
+        individual = list(range(num_cities))
+        random.shuffle(individual)
+        population.append(individual)
+    return population
+
+# Step 3: Evaluate fitness
+def evaluate_fitness(population, distances):
+    """Evaluates fitness as the inverse of the route distance."""
+    fitness = []
+    for individual in population:
+        distance = calculate_distance(individual, distances)
+        fitness.append(1 / distance)  # Inverse for minimization
+    return fitness
+
+# Step 4: Selection (roulette wheel selection)
+def select_parents(population, fitness):
+    """Selects parents using roulette wheel selection."""
+    total_fitness = sum(fitness)
+    probabilities = [f / total_fitness for f in fitness]
+    selected = random.choices(population, weights=probabilities, k=len(population))
+    return selected
+
+# Step 5: Crossover
+def crossover(parent1, parent2):
+    """Performs ordered crossover."""
+    size = len(parent1)
+    start, end = sorted(random.sample(range(size), 2))
+    child = [-1] * size
+    child[start:end] = parent1[start:end]
+    ptr = end
+    for gene in parent2:
+        if gene not in child:
+            if ptr == size:
+                ptr = 0
+            child[ptr] = gene
+            ptr += 1
+    return child
+
+# Step 6: Mutation
+def mutate(individual, mutation_rate):
+    """Swaps two cities with a given mutation rate."""
+    if random.random() < mutation_rate:
+        i, j = random.sample(range(len(individual)), 2)
+        individual[i], individual[j] = individual[j], individual[i]
+
+# Step 7: Genetic Algorithm
+def genetic_algorithm(distances, pop_size=100, mutation_rate=0.1, generations=500):
+    num_cities = len(distances)
+    population = initialize_population(pop_size, num_cities)
+    best_solution = None
+    best_distance = float("inf")
+
+    for generation in range(generations):
+        fitness = evaluate_fitness(population, distances)
+        population = select_parents(population, fitness)
+
+        # Perform crossover
+        next_generation = []
+        for i in range(0, len(population), 2):
+            parent1, parent2 = population[i], population[(i + 1) % len(population)]
+            child = crossover(parent1, parent2)
+            next_generation.append(child)
+
+        # Perform mutation
+        for individual in next_generation:
+            mutate(individual, mutation_rate)
+
+        # Update population
+        population = next_generation
+
+        # Track the best solution
+        for individual in population:
+            distance = calculate_distance(individual, distances)
+            if distance < best_distance:
+                best_distance = distance
+                best_solution = individual
+
+        print(f"Generation {generation + 1}: Best Distance = {best_distance}")
+
+    return best_solution, best_distance
+
+# Example usage
+if __name__ == "__main__":
+    # Define a sample distance matrix
+    distances = [
+        [0, 2, 9, 10],
+        [1, 0, 6, 4],
+        [15, 7, 0, 8],
+        [6, 3, 12, 0]
+    ]
+
+    best_route, best_distance = genetic_algorithm(distances, pop_size=50, mutation_rate=0.2, generations=100)
+    print("Best Route:", best_route)
+    print("Best Distance:", best_distance)
+
